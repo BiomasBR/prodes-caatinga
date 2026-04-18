@@ -1,0 +1,1 @@
+This repository is intended to store the scripts used in the SITS project for the Caatinga Biome.
