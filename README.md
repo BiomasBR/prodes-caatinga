@@ -1,53 +1,50 @@
+PRODES-Caatinga experiments and pipelines developed using the SITS package
+================
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<img src="./inst/extdata/sticker/biomasbr_logo.jpeg" alt="RESTORE+ icon" align="right" height="150" width="150"/>
 
-# prodes.caatinga
+This repository brings together reproducible experiments and processing pipelines
+from the PRODES-Caatinga project, developed using the SITS package. Its purpose
+is to clearly and systematically document the adopted workflows,
+providing references for experimentation, validation, and methodological
+improvements, while supporting reproducibility and the continuous
+evolution of project's analyses.
 
-<!-- badges: start -->
+# Getting started
 
-<!-- badges: end -->
+To use the scripts in this repository, clone the project to
+your local machine using the command below:
 
-The goal of prodes.caatinga is to …
-
-## Installation
-
-You can install the development version of prodes.caatinga from
-[GitHub](https://github.com/) with:
-
-``` r
-# install.packages("pak")
-pak::pak("francojra/sits-prodes-caatinga")
+``` sh
+git clone https://github.com/francojra/sits-prodes-caatinga.git
 ```
 
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-library(prodes.caatinga)
-## basic example code
-```
-
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+After cloning, open the sits-prodes-caatinga directory in RStudio and install the
+package using the command:
 
 ``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
+devtools::install(".")
 ```
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this.
+# Documentation
+Visit the sitsbook to explore the package *sits* and learn more about:
 
-You can also embed plots, for example:
+``` sh
+https://e-sensing.github.io/sitsbook/
+```
 
-<img src="man/figures/README-pressure-1.png" alt="" width="100%" />
+# Repository structure
 
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+- `data/`: Datasets used and generated throughout the analyses
+- `docs/`: Supplementary resources required for the package to run
+- `results/`: Our results from processing with sits
+- `scripts/`: Processing and experimentation routines
+
+# License
+
+The data and results available in this repository are licensed under MIT License. Copyright (c) 2026 autores prodes.caatinga. Please consult the LICENSE.md file.
+
+## Support
+
+For questions, suggestions, or issues, please use the **Issues** section or
+contact the repository maintainers.
