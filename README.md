@@ -1,7 +1,7 @@
 PRODES-Caatinga experiments and pipelines developed using the SITS package
 ================
 
-<img src="./man/figures/biomasbr_logo.jpg" align="right" height="100" width="100"/>
+<img src="./figures/biomasbr_logo.jpg" align="right" height="100" width="100"/>
 
 This repository brings together reproducible experiments and processing pipelines
 from the PRODES-Caatinga project, developed using the SITS package. Its purpose
@@ -37,12 +37,14 @@ https://e-sensing.github.io/sitsbook/
 
 - `data/`: Datasets used and generated throughout the analyses
 - `docs/`: Supplementary resources required for the package to run
+- `figures/`: Supplementary resources required for the readme files
 - `results/`: Our results from processing with sits
 - `scripts/`: Processing and experimentation routines
+- `R/`: Package functions
 
 # License
 
-The data and results available in this repository are licensed under MIT License. Copyright (c) 2026 autores prodes.caatinga. Please consult the LICENSE.md file.
+The data and results available in this repository are licensed under MIT License. Copyright (c) 2026 autores prodes.caatinga. Please consult the license file.
 
 ## Support
 
