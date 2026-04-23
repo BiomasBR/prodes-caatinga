@@ -1,55 +1,50 @@
----
-output: github_document
----
+PRODES-Caatinga experiments and pipelines developed using the SITS package
+================
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<img src="./inst/extdata/sticker/biomasbr_logo.jpeg" alt="RESTORE+ icon" align="right" height="150" width="150"/>
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "man/figures/README-",
-  out.width = "100%"
-)
+This repository brings together reproducible experiments and processing pipelines
+from the PRODES-Caatinga project, developed using the SITS package. Its purpose
+is to clearly and systematically document the adopted workflows,
+providing references for experimentation, validation, and methodological
+improvements, while supporting reproducibility and the continuous
+evolution of project's analyses.
+
+# Getting started
+
+To use the scripts in this repository, clone the project to
+your local machine using the command below:
+
+``` sh
+git clone https://github.com/francojra/sits-prodes-caatinga.git
 ```
 
-# prodes.caatinga
-
-<!-- badges: start -->
-<!-- badges: end -->
-
-The goal of prodes.caatinga is to ...
-
-## Installation
-
-You can install the development version of prodes.caatinga from [GitHub](https://github.com/) with:
+After cloning, open the sits-prodes-caatinga directory in RStudio and install the
+package using the command:
 
 ``` r
-# install.packages("pak")
-pak::pak("francojra/sits-prodes-caatinga")
+devtools::install(".")
 ```
 
-## Example
+# Documentation
+Visit the sitsbook to explore the package *sits* and learn more about:
 
-This is a basic example which shows you how to solve a common problem:
-
-```{r example}
-library(prodes.caatinga)
-## basic example code
+``` sh
+https://e-sensing.github.io/sitsbook/
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
+# Repository structure
 
-```{r cars}
-summary(cars)
-```
+- `data/`: Datasets used and generated throughout the analyses
+- `docs/`: Supplementary resources required for the package to run
+- `results/`: Our results from processing with sits
+- `scripts/`: Processing and experimentation routines
 
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this.
+# License
 
-You can also embed plots, for example:
+The data and results available in this repository are licensed under MIT License. Copyright (c) 2026 autores prodes.caatinga. Please consult the LICENSE.md file.
 
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
+## Support
 
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.
+For questions, suggestions, or issues, please use the **Issues** section or
+contact the repository maintainers.
