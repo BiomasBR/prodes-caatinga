@@ -34,13 +34,15 @@ devtools::install(".")
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
 
-# Folders containing classification results
+# Folders containing .tif results from the classifications
 
-### Bands + NDII
+### LTAE: Bands
+
+### LTAE: Bands + NDII
 
 https://drive.google.com/drive/folders/1-L1DtwxDkXNRLOserSdX_mMRYUm9DyW7
 
-### Bands + DBSI
+### LTAE: Bands + DBSI
 
 https://drive.google.com/drive/folders/1NkxmZxk8wI5CtrdbFRstI_yfbze3nVq8
 
