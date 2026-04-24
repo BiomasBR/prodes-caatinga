@@ -4,3 +4,5 @@
 .httr-oauth
 .DS_Store
 .quarto
+results/tif/*.tif
+results/tif/*.tif
