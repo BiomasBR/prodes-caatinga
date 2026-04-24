@@ -34,7 +34,18 @@ devtools::install(".")
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
 
+# Folders containing classification results
+
+### Bands + NDII
+
+https://drive.google.com/drive/folders/1-L1DtwxDkXNRLOserSdX_mMRYUm9DyW7
+
+### Bands + DBSI
+
+https://drive.google.com/drive/folders/1NkxmZxk8wI5CtrdbFRstI_yfbze3nVq8
+
 # Documentation
+
 Visit the sitsbook to explore the package *sits* and learn more about:
 
 ``` sh
