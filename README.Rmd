@@ -26,13 +26,6 @@ package using the command:
 devtools::install(".")
 ```
 
-# Documentation
-Visit the sitsbook to explore the package *sits* and learn more about:
-
-``` sh
-https://e-sensing.github.io/sitsbook/
-```
-
 # Repository structure
 
 - `data/`: Datasets used and generated throughout the analyses
@@ -40,6 +33,13 @@ https://e-sensing.github.io/sitsbook/
 - `results/`: Our results from processing with sits
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
+
+# Documentation
+Visit the sitsbook to explore the package *sits* and learn more about:
+
+``` sh
+https://e-sensing.github.io/sitsbook/
+```
 
 # License
 
