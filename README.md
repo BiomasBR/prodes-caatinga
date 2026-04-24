@@ -10,22 +10,6 @@ providing references for experimentation, validation, and methodological
 improvements, while supporting reproducibility and the continuous
 evolution of project's analyses.
 
-# Getting started
-
-To use the scripts in this repository, clone the project to
-your local machine using the command below:
-
-``` sh
-git clone https://github.com/francojra/sits-prodes-caatinga.git
-```
-
-After cloning, open the sits-prodes-caatinga directory in RStudio and install the
-package using the command:
-
-``` r
-devtools::install(".")
-```
-
 # Repository structure
 
 - `data/`: Datasets used and generated throughout the analyses
@@ -46,6 +30,22 @@ Visit the sitsbook to explore the package *sits* and learn more about:
 
 ``` sh
 https://e-sensing.github.io/sitsbook/
+```
+
+# Getting started
+
+To use the scripts in this repository, clone the project to
+your local machine using the command below:
+
+``` sh
+git clone https://github.com/francojra/sits-prodes-caatinga.git
+```
+
+After cloning, open the sits-prodes-caatinga directory in RStudio and install the
+package using the command:
+
+``` r
+devtools::install(".")
 ```
 
 # License
