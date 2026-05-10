@@ -18,12 +18,6 @@ evolution of project's analyses.
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
 
-# Folders containing .tif files with the classification results
-
-### Results LTAE
-
-https://drive.google.com/drive/folders/1XhNVZMAIYg27ELoTXWhBXucr64ifPe2G?hl=pt-br
-
 # Documentation
 
 Visit the sitsbook to explore the package *sits* and learn more about:
