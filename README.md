@@ -1,10 +1,10 @@
-PRODES-Caatinga experiments and pipelines developed using the SITS package
+Prodes-Caatinga experiments and pipelines developed using the SITS package
 ================
 
 <img src="./docs/figures/biomasbr_logo.jpg" align="right" height="100" width="100"/>
 
 This repository brings together reproducible experiments and processing pipelines
-from the PRODES-Caatinga project, developed using the SITS package. Its purpose
+from the Prodes-Caatinga project, developed using the SITS package. Its purpose
 is to clearly and systematically document the adopted workflows,
 providing references for experimentation, validation, and methodological
 improvements, while supporting reproducibility and the continuous
