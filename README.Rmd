@@ -14,7 +14,6 @@ evolution of project's analyses.
 
 - `data/`: Datasets used and generated throughout the analyses
 - `docs/`: Supplementary resources as word, pptx, figures (png, jpg, tif), pdfs, shp, gpkg and xlsx
-- `results/`: Our results from processing with sits
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
 
