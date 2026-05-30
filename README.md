@@ -17,7 +17,7 @@ evolution of project's analyses.
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
 
-# Branchs
+# Branches
 
 - main
 - dev
