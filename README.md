@@ -17,6 +17,11 @@ evolution of project's analyses.
 - `scripts/`: Processing and experimentation routines
 - `R/`: Package functions
 
+# Branchs
+
+- main
+- dev
+
 # Documentation
 
 Visit the sitsbook to explore the package *sits* and learn more about:
