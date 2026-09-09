@@ -1,0 +1,44 @@
+Para executar no Jupyter
+
+Coloque na mesma pasta:
+
+seu_projeto/
+│
+├── seu_notebook.ipynb
+├── precipitacao_MERGE_quinzenal_2024_por_poligono.py
+└── Tiles_BDC_Caatinga_Clusters_v2.zip
+
+No Jupyter, inicialmente tente:
+
+%pip install geopandas rasterio exactextract requests pandas numpy openpyxl tqdm
+
+Como o MERGE está em GRIB2, o Rasterio/GDAL precisa possuir suporte ao driver GRIB. Caso o script informe que o driver GRIB não está disponível e você utilize Anaconda/Miniconda, execute:
+
+%conda install -c conda-forge rasterio gdal eccodes geopandas -y
+
+e depois:
+
+%pip install exactextract requests openpyxl tqdm
+
+Reinicie o kernel, se necessário.
+
+Depois execute:
+
+%run precipitacao_MERGE_quinzenal_2024_por_poligono.py
+Arquivos de saída
+
+Será criada automaticamente a pasta:
+
+resultados_MERGE_2024/
+
+contendo:
+
+precipitacao_MERGE_quinzenal_2024_long.csv
+precipitacao_MERGE_quinzenal_2024_wide.csv
+precipitacao_MERGE_quinzenal_2024.xlsx
+
+O Excel terá três abas:
+
+quinzenal_long: 2.712 linhas, uma linha por polígono/quinzena;
+quinzenal_wide: 113 linhas, uma por polígono, com 24 colunas de precipitação;
+metadados: descrição da fonte, variável, resolução e método.
