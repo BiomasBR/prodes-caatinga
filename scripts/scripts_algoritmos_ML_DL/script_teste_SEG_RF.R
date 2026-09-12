@@ -1,0 +1,485 @@
+# ==================================================================================
+
+# CLASSIFICAÇÃO COM SEGMENTOS - TESTES 2026.2
+# SEGMENTAÇÃO COM MODELO RANDOM FOREST - SEG_RF_ST
+# RESPONSÁVEL: JEANNE
+# DATA: 06/08/2026
+
+# ==================================================================================
+
+# LIMPAR AMBIENTE
+
+# ==================================================================================
+
+rm(list = ls()) 
+
+# ==================================================================================
+
+# CONFIGURAÇÕES PARA OTIMIZAR USO DA GPU E CPU
+
+# ==================================================================================
+
+devtools::install_github("e-sensing/sits@dev") # Instalar versão dev do sits
+# Sys.setenv(SITS_GPU_PIPELINE = "stream") -> NÃO EXISTE MAIS NO SITS
+# Sys.setenv(SITS_FORCE_CPU = "TRUE") # Desliga a GPU, portanto, usamos o FALSE
+Sys.getenv("SITS_FORCE_CPU") # Deve estar vazio para usar GPU
+torch::cuda_is_available() # O cuda deve estar disponível = TRUE
+
+# ==================================================================================
+
+# PACOTES
+
+# ==================================================================================
+
+# Para instalar pacote sits da versão estável do CRAN
+
+# devtools::install_github("e-sensing/sits", dependencies = TRUE)
+# install.packages("sits", dependencies = TRUE)
+
+library(sits)
+library(tidyverse)
+library(sf)
+library(terra)
+library(raster)
+library(luz)
+library(torch)
+
+# ==================================================================================
+
+# CONFIGURAÇÕES
+
+# ==================================================================================
+
+# O modelo será treinado com todas as amostras da RM
+
+tiles_treino <- c("037011", "037012", "037013",
+                  "038012", "038013", "039012",
+                  "039013", "039014", "040012",
+                  "040013", "040014", "041012",
+                  "041013", "041014", "041015")
+
+# E a classificação será feita apenas nesses tiles:
+
+tile_classificacao <- c("037011", "037012","038012")
+
+# Datas inicial e final para as classificações
+
+start_date <- "2024-07-27"
+end_date   <- "2025-12-19"
+
+# Criar novas pastas onde os arquivos serão armazenados
+
+dir_rds   <- "arquivos_rds"
+dir_model <- "modelos"
+dir_out   <- "classificacao_SEG_RF_ST"
+dir_out_seg <- "segmentacoes_SEG_RF_ST"
+
+dir.create(dir_rds, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_model, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_out, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_out_seg, recursive = TRUE, showWarnings = FALSE)
+
+# ==================================================================================
+
+# CUBO DE TREINO (MÚLTIPLOS TILES)
+
+# ==================================================================================
+
+# Criar cubo de dados com tiles e datas definidas anteriormente
+
+cubo_treino <- sits_cube(
+  source     = "BDC",
+  collection = "SENTINEL-2-16D",
+  tiles      = tiles_treino,
+  start_date = start_date,
+  end_date   = end_date
+)
+
+## Remoção das bandas B01 e B09
+
+cubo_treino <- sits_select(
+  cubo_treino,
+  bands = c("B02","B03","B04","B05",
+            "B06","B07","B08","B11",
+            "B12","B8A","CLOUD")
+)
+
+sits_bands(cubo_treino)
+sits_timeline(cubo_treino)
+
+saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_SEG_RF_ST.rds"))
+cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_SEG_RF_ST.rds"))
+
+# ==================================================================================
+
+## Essa função vai ajudar a deixar a marcação de tempo de processamento mais amigável
+### Formatando saída da contagem de tempo dos processamentos
+
+formatar_tempo <- function(segundos) {
+  horas <- floor(segundos / 3600)
+  minutos <- floor((segundos %% 3600) / 60)
+  segundos <- round(segundos %% 60)
+  
+  sprintf("%02dh %02dm %02ds", horas, minutos, segundos)
+}
+
+# ==================================================================================
+# SALVAR TEMPOS DE PROCESSAMENTO
+# ==================================================================================
+
+registrar_tempo <- function(
+    etapa,
+    tempo,
+    arquivo = file.path(dir_out, "tempos_processamento.csv")
+)  {
+  
+  linha <- data.frame(
+    etapa = etapa,
+    tempo_segundos = as.numeric(tempo["elapsed"]),
+    tempo_horas = as.numeric(tempo["elapsed"]) / 3600,
+    tempo_formatado = formatar_tempo(tempo["elapsed"])
+  )
+  
+  write.table(
+    linha,
+    file = arquivo,
+    sep = ",",
+    row.names = FALSE,
+    col.names = !file.exists(arquivo),
+    append = file.exists(arquivo)
+  )
+}
+
+# ==================================================================================
+
+# AMOSTRAS (USANDO CUBO DE TREINO)
+
+# ==================================================================================
+
+## Observação: os diretórios devem ser verificados para leitura dos arquivos.
+
+tempo_sits_get_data <- system.time({
+  amostras <- sits_get_data(
+    cube        = cubo_treino,
+    samples     = "amostras_adicionais_finais_RM01.shp",
+    label_attr  = "label",
+    bands       = sits_bands(cubo_treino),
+    multicores  = 38,# O máximo  é 44
+    memsize     = 110, # O máximo é 144
+    progress    = TRUE
+  )
+})
+
+formatar_tempo(tempo_sits_get_data["elapsed"])
+
+registrar_tempo("Cubo de amostras", tempo_sits_get_data)
+
+saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_SEG_RF_ST.rds"))
+
+# Recarregar em nova sessão
+
+amostras <- readRDS(file.path(dir_rds,"amostras_cubo_teste_SEG_RF_ST.rds"))
+
+summary(amostras)
+sits_bands(amostras)
+
+# ==================================================================================
+
+# TREINAMENTO DO MODELO E VALIDAÇÃO K-FOLD
+
+# ==================================================================================
+
+set.seed(321)
+
+tempo_treino <- system.time({
+  modelo_seg_rf <- sits_train(
+    samples = amostras,
+    ml_method = sits_rfor()
+  )
+  
+  seg_validate <- sits_kfold_validate(
+    samples = amostras,
+    folds = 5,
+    ml_method = sits_rfor(),
+    multicores = 5
+  )
+  
+})
+
+## Salvar modelo e visualizar gráfico
+
+saveRDS(modelo_seg_rf, file.path(dir_model, "modelo_SEG_RF_ST.rds"))
+
+modelo_seg_rf <- readRDS(file.path(dir_model, "modelo_SEG_RF_ST.rds"))
+
+plot(modelo_seg_rf)
+
+## Visualizar resultados da validação K-Fold
+
+seg_validate
+
+plot(seg_validate, type = "confusion_matrix")
+
+## Visualizar tempo de treino + validação
+
+formatar_tempo(tempo_treino["elapsed"])
+
+registrar_tempo("Treinamento", tempo_treino)
+
+# ==================================================================================
+
+# GERAR CUBO PARA CLASSIFICAÇÃO
+
+# ==================================================================================
+
+cubo_classificacao <- sits_cube(
+  source     = "BDC",
+  collection = "SENTINEL-2-16D",
+  tiles      = tile_classificacao,
+  start_date = start_date,
+  end_date   = end_date
+)
+
+cubo_classificacao <- sits_select(
+  cubo_classificacao,
+  bands = c("B02","B03","B04","B05",
+            "B06","B07","B08","B11",
+            "B12","B8A","CLOUD")
+)
+
+# ==================================================================================
+
+# SEGMENTAÇÃO DAS IMAGENS DO CUBO - MÉTODO SNIC
+
+# ==================================================================================
+
+## Método com SNIC é muito mais rápido do que o SLIC e produz bons resultados.
+
+tempo_seg <- system.time({
+  segments_snic <- sits_segment(
+    cube = cubo_classificacao,
+    output_dir = dir_out_seg,
+    seg_fn = sits_snic(
+      grid_seeding = "rectangular", # "diamond" ou "hexagonal" ou "random", organização espacial do grid.
+      spacing = 20, # Distância (em número de pixels) entre os centros dos superpixels iniciais.
+      compactness = 0.5, # Valor numérico entre 0 e 1 que controla a densidade dos superpixels. 
+      padding = 10 # Distância (em pixels) das bordas da imagem dentro das quais nenhuma semente é colocada.
+    ),
+    multicores = 2, 
+    memsize    = 96, 
+    progress   = TRUE,
+    version    = "SEG_RF_ST"
+  )
+})
+
+plot(segments_snic)
+
+formatar_tempo(tempo_seg["elapsed"])
+
+registrar_tempo("Segmentação", tempo_seg)
+
+saveRDS(segments_snic, file.path(dir_rds, "cubo_segmento_SEG_RF_ST.rds"))
+
+# ==================================================================================
+
+# LOOP DE CLASSIFICAÇÃO POR TILE A TILE 
+
+# ==================================================================================
+
+segments_all <- segments_snic
+
+for (tile in tile_classificacao) {
+  
+  cat("\n=============================================================\n")
+  cat("PROCESSANDO TILE:", tile, "\n")
+  cat("=============================================================\n\n")
+  
+  # Selecionar um tile específico do cubo para o loop tile a tile
+  
+  segments_tile <- sits_select(segments_all, tiles = tile)
+  
+  tempo_classificacao <- system.time({
+    class_probs <- sits_classify(
+      data       = segments_tile,
+      ml_model   = modelo_seg_rf,
+      output_dir = dir_out,
+      multicores = 2, 
+      memsize    = 96, 
+      gpu_memory = 18,
+      progress   = TRUE,
+      version    = "SEG_RF_ST"
+    )
+  })
+  
+  # Mostra o tempo de processamento
+  
+  formatar_tempo(tempo_classificacao["elapsed"])
+  
+  registrar_tempo(
+    paste("Classificação - Tile", tile),
+    tempo_classificacao
+  )
+  
+  # ==================================================================================
+  
+  # VARIÂNCIA
+  
+  # ==================================================================================
+  
+  # Calcular valores de variância para cada classe 
+  
+  tempo_variance <- system.time({
+    variance <- sits_variance(
+      cube           = class_probs,
+      window_size    = 5,
+      neigh_fraction = 0.5,
+      output_dir     = dir_out,
+      multicores     = 16,
+      memsize        = 98,
+      version        = "SEG_RF_ST"
+    )
+  })
+  
+  formatar_tempo(tempo_variance["elapsed"])
+  
+  registrar_tempo(
+    paste("Variância - Tile", tile),
+    tempo_variance
+  )
+  
+  # ==================================================================================
+  
+  # HIPERPARÂMETROS DE SUAVIZAÇÃO
+  
+  # ==================================================================================
+  
+  # Definir porcentagens de cada classe e extrair valores para suavização
+  
+  sumv_df <- as.data.frame(summary(variance))
+  
+  cat("\n--- VARIÂNCIA (percentis) –", "TILE", tile, "\n")
+  print(sumv_df)
+  
+  tempo_smooth <- system.time({
+    smooth_values <- c(
+      aflor_rocha = sumv_df["80%", "aflor_rocha"],
+      agua        = sumv_df["85%", "agua"],
+      graminea    = sumv_df["85%", "graminea"],
+      queimada    = sumv_df["85%", "queimada"],
+      supressao   = sumv_df["80%", "supressao"],
+      veg_natural = sumv_df["85%", "veg_natural"]
+    )
+  })
+  
+  formatar_tempo(tempo_smooth["elapsed"])
+  
+  registrar_tempo(
+    paste("Valores Smooth - Tile", tile),
+    tempo_smooth
+  )
+  
+  # ==================================================================================
+  
+  # SUAVIZAÇÃO E CLASSIFICAÇÃO TEMÁTICA FINAL
+  
+  # ==================================================================================
+  
+  tempo_smooth_map <- system.time({
+    cube_smooth <- sits_smooth(
+      cube           = class_probs,
+      smoothness     = smooth_values,
+      window_size    = 5,
+      neigh_fraction = 0.5,
+      progress       = TRUE,
+      output_dir     = dir_out,
+      multicores     = 16,
+      memsize        = 98,
+      version        = "SEG_RF_ST"
+    )
+    
+    # Mapa Classificado
+    
+    sits_label_classification(
+      cube       = cube_smooth,
+      output_dir = dir_out,
+      multicores = 16,
+      memsize    = 98,
+      version    = "SEG_RF_ST"
+    )
+  })
+  
+  formatar_tempo(tempo_smooth_map["elapsed"])
+  
+  registrar_tempo(
+    paste("Suavização + Mapa - Tile", tile),
+    tempo_smooth_map
+  )
+  
+  # ==================================================================================
+  
+  # INCERTEZA
+  
+  # ==================================================================================
+  
+  tempo_uncertainty <- system.time({
+    uncertainty <- sits_uncertainty(
+      cube       = class_probs,
+      type       = "margin",
+      output_dir = dir_out,
+      multicores = 16,
+      memsize    = 98,
+      version    = "SEG_RF_ST"
+    )
+  })
+  
+  formatar_tempo(tempo_uncertainty["elapsed"])
+  
+  registrar_tempo(
+    paste("Incerteza - Tile", tile),
+    tempo_uncertainty
+  )
+  
+}
+
+# ==================================================================================
+
+# RELATÓRIO FINAL DO TEMPO DE PROCESSAMENTO
+
+# ==================================================================================
+
+tempos_df <- tibble(
+  etapa = c(
+    "Cubo de amostras",
+    "Treinamento",
+    "Segmentação",
+    "Classificação",
+    "Variância",
+    "Valores Smooth",
+    "Suavização + Mapa",
+    "Incerteza"
+  ),
+  
+  tempo_horas = c(
+    tempo_sits_get_data["elapsed"] / 3600,
+    tempo_treino["elapsed"] / 3600,
+    tempo_seg["elapsed"] / 3600,
+    tempo_classificacao["elapsed"] / 3600,
+    tempo_variance["elapsed"] / 3600,
+    tempo_smooth["elapsed"] / 3600,
+    tempo_smooth_map["elapsed"] / 3600,
+    tempo_uncertainty["elapsed"] / 3600
+  ),
+  
+  tempo_formatado = c(
+    formatar_tempo(tempo_sits_get_data["elapsed"]),
+    formatar_tempo(tempo_treino["elapsed"]),
+    formatar_tempo(tempo_seg["elapsed"]),
+    formatar_tempo(tempo_classificacao["elapsed"]),
+    formatar_tempo(tempo_variance["elapsed"]),
+    formatar_tempo(tempo_smooth["elapsed"]),
+    formatar_tempo(tempo_smooth_map["elapsed"]),
+    formatar_tempo(tempo_uncertainty["elapsed"])
+  )
+)
+
+tempos_df
