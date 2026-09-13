@@ -1,8 +1,6 @@
 # ==================================================================================
 
-# CLASSIFICAÇÃO RESNET - TESTES 2026.2
-# TESTE RESNET SEM TUNNING - RESNET_ST
-# RESPONSÁVEL: JEANNE FRANCO
+# RESIDUAL 1D CNN NETWORKS - RESNET
 # DATA: 26/08/2026
 
 # ==================================================================================
@@ -11,7 +9,7 @@
 
 # ==================================================================================
 
-rm(list = ls()) 
+rm(list = ls())
 
 # ==================================================================================
 
@@ -69,7 +67,7 @@ end_date   <- "2025-12-19"
 
 dir_rds   <- "arquivos_rds"
 dir_model <- "modelos"
-dir_out   <- "classificacao_RESNET_ST"
+dir_out   <- "classificacao_RESNET"
 
 dir.create(dir_rds, recursive = TRUE, showWarnings = FALSE)
 dir.create(dir_model, recursive = TRUE, showWarnings = FALSE)
@@ -101,8 +99,8 @@ cubo_treino <- sits_select(
 sits_bands(cubo_treino)
 sits_timeline(cubo_treino)
 
-saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_RESNET_ST.rds"))
-cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_RESNET_ST.rds"))
+saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_RESNET.rds"))
+cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_RESNET.rds"))
 
 # ==================================================================================
 
@@ -113,7 +111,7 @@ formatar_tempo <- function(segundos) {
   horas <- floor(segundos / 3600)
   minutos <- floor((segundos %% 3600) / 60)
   segundos <- round(segundos %% 60)
-  
+
   sprintf("%02dh %02dm %02ds", horas, minutos, segundos)
 }
 
@@ -126,14 +124,14 @@ registrar_tempo <- function(
     tempo,
     arquivo = file.path(dir_out, "tempos_processamento.csv")
 )  {
-  
+
   linha <- data.frame(
     etapa = etapa,
     tempo_segundos = as.numeric(tempo["elapsed"]),
     tempo_horas = as.numeric(tempo["elapsed"]) / 3600,
     tempo_formatado = formatar_tempo(tempo["elapsed"])
   )
-  
+
   write.table(
     linha,
     file = arquivo,
@@ -166,11 +164,11 @@ tempo_sits_get_data <- system.time({
 
 formatar_tempo(tempo_sits_get_data["elapsed"])
 
-saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_RESNET_ST.rds"))
+saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_RESNET.rds"))
 
 # Recarregar em nova sessão
 
-amostras <- readRDS(file.path(dir_rds, "amostras_cubo_teste_RESNET_ST.rds"))
+amostras <- readRDS(file.path(dir_rds, "amostras_cubo_teste_RESNET.rds"))
 
 summary(amostras)
 sits_bands(amostras)
@@ -192,8 +190,8 @@ tempo_treino <- system.time({
 
 formatar_tempo(tempo_treino["elapsed"])
 
-saveRDS(modelo_resnet, file.path(dir_model, "modelo_RESNET_ST.rds"))
-modelo_resnet <- readRDS(file.path(dir_model,"modelo_RESNET_ST.rds"))
+saveRDS(modelo_resnet, file.path(dir_model, "modelo_RESNET.rds"))
+modelo_resnet <- readRDS(file.path(dir_model,"modelo_RESNET.rds"))
 
 plot(modelo_resnet)
 
@@ -226,48 +224,48 @@ cubo_classificacao <- sits_select(
   cubo_classificacao,
   bands = c("B02","B03","B04","B05",
             "B06","B07","B08","B11",
-            "B12","B8A", "CLOUD") 
+            "B12","B8A", "CLOUD")
 )
 
 # ==================================================================================
 
-# LOOP DE CLASSIFICAÇÃO POR TILE A TILE 
+# LOOP DE CLASSIFICAÇÃO POR TILE A TILE
 
 # ==================================================================================
 
 for (tile in tile_classificacao) {
-  
+
   cat("\n=============================================================\n")
   cat("PROCESSANDO TILE:", tile, "\n")
   cat("=============================================================\n\n")
-  
+
   # Selecionar um tile específico do cubo para o loop tile a tile
-  
+
   cubo_tile <- sits_select(cubo_classificacao, tiles = tile)
-  
+
   tempo_classificacao <- system.time({
     class_probs <- sits_classify(
       data       = cubo_tile,
       ml_model   = modelo_resnet,
       output_dir = dir_out,
-      multicores = 16, 
-      memsize    = 128, 
+      multicores = 16,
+      memsize    = 128,
       gpu_memory = 5,
       progress   = TRUE,
-      version    = "RESNET_ST"
+      version    = "RESNET"
     )
   })
-  
+
   # Mostra o tempo de processamento
-  
+
   formatar_tempo(tempo_classificacao["elapsed"])
-  
+
   # ==================================================================================
-  
+
   # 7. VARIÂNCIA
-  
+
   # ==================================================================================
-  
+
   tempo_variance <- system.time({
     variance <- sits_variance(
       cube           = class_probs,
@@ -276,24 +274,24 @@ for (tile in tile_classificacao) {
       output_dir     = dir_out,
       multicores     = 16,
       memsize        = 128,
-      version        = "RESNET_ST"
+      version        = "RESNET"
     )
   })
-  
+
   formatar_tempo(tempo_variance["elapsed"])
-  
+
   # ==================================================================================
-  
+
   # 8. HIPERPARÂMETROS DE SUAVIZAÇÃO
-  
+
   # ==================================================================================
-  
-  
+
+
   sumv_df <- as.data.frame(summary(variance))
-  
+
   cat("\n--- VARIÂNCIA (percentis) –", "TILE", tile, "\n")
   print(sumv_df)
-  
+
   tempo_smooth <- system.time({
     smooth_values <- c(
       aflor_rocha = sumv_df["80%", "aflor_rocha"],
@@ -303,17 +301,17 @@ for (tile in tile_classificacao) {
       supressao   = sumv_df["80%", "supressao"],
       veg_natural = sumv_df["85%", "veg_natural"]
     )
-    
+
   })
-  
+
   formatar_tempo(tempo_smooth["elapsed"])
-  
+
   # ==================================================================================
-  
+
   # 9. SUAVIZAÇÃO E CLASSIFICAÇÃO TEMÁTICA FINAL
-  
+
   # ==================================================================================
-  
+
   tempo_smooth_map <- system.time({
     cube_smooth <- sits_smooth(
       cube           = class_probs,
@@ -324,28 +322,28 @@ for (tile in tile_classificacao) {
       output_dir     = dir_out,
       multicores     = 16,
       memsize        = 58,
-      version        = "RESNET_ST"
+      version        = "RESNET"
     )
-    
+
     # Mapa Classificado
-    
+
     sits_label_classification(
       cube       = cube_smooth,
       output_dir = dir_out,
       multicores = 16,
       memsize    = 58,
-      version    = "RESNET_ST"
+      version    = "RESNET"
     )
   })
-  
+
   formatar_tempo(tempo_smooth_map["elapsed"])
-  
+
   # ==================================================================================
-  
+
   # 10. INCERTEZA
-  
+
   # ==================================================================================
-  
+
   tempo_uncertainty <- system.time({
     uncertainty <- sits_uncertainty(
       cube       = class_probs,
@@ -353,12 +351,12 @@ for (tile in tile_classificacao) {
       output_dir = dir_out,
       multicores = 16,
       memsize    = 58,
-      version    = "RESNET_ST"
+      version    = "RESNET"
     )
   })
-  
+
   formatar_tempo(tempo_uncertainty["elapsed"])
-  
+
 }
 
 # ==================================================================================
@@ -377,7 +375,7 @@ tempos_df <- tibble(
     "Suavização + Mapa",
     "Incerteza"
   ),
-  
+
   tempo_horas = c(
     # tempo_sits_get_data["elapsed"] / 3600,
     # tempo_treino["elapsed"] / 3600,
@@ -387,7 +385,7 @@ tempos_df <- tibble(
     tempo_smooth_map["elapsed"] / 3600,
     tempo_uncertainty["elapsed"] / 3600
   ),
-  
+
   tempo_formatado = c(
     # formatar_tempo(tempo_sits_get_data["elapsed"]),
     # formatar_tempo(tempo_treino["elapsed"]),

@@ -1,8 +1,6 @@
 # ==================================================================================
 
-# CLASSIFICAÇÃO EGB_ST - TESTES 2026.2
-# EXTREME GRADIENT BOOSTING - EGB_ST
-# RESPONSÁVEL: JEANNE
+# EXTREME GRADIENT BOOSTING - EGB
 # DATA: 15/08/2026
 
 # ==================================================================================
@@ -11,7 +9,7 @@
 
 # ==================================================================================
 
-rm(list = ls()) 
+rm(list = ls())
 
 # ==================================================================================
 
@@ -71,7 +69,7 @@ end_date   <- "2025-12-19"
 
 dir_rds   <- "arquivos_rds"
 dir_model <- "modelos"
-dir_out   <- "classificacao_EGB_ST"
+dir_out   <- "classificacao_EGB"
 
 dir.create(dir_rds, recursive = TRUE, showWarnings = FALSE)
 dir.create(dir_model, recursive = TRUE, showWarnings = FALSE)
@@ -105,8 +103,8 @@ cubo_treino <- sits_select(
 sits_bands(cubo_treino)
 sits_timeline(cubo_treino)
 
-saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_EGB_ST.rds"))
-cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_EGB_ST.rds"))
+saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_EGB.rds"))
+cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_EGB.rds"))
 
 # ==================================================================================
 
@@ -117,7 +115,7 @@ formatar_tempo <- function(segundos) {
   horas <- floor(segundos / 3600)
   minutos <- floor((segundos %% 3600) / 60)
   segundos <- round(segundos %% 60)
-  
+
   sprintf("%02dh %02dm %02ds", horas, minutos, segundos)
 }
 
@@ -130,14 +128,14 @@ registrar_tempo <- function(
     tempo,
     arquivo = file.path(dir_out, "tempos_processamento.csv")
 )  {
-  
+
   linha <- data.frame(
     etapa = etapa,
     tempo_segundos = as.numeric(tempo["elapsed"]),
     tempo_horas = as.numeric(tempo["elapsed"]) / 3600,
     tempo_formatado = formatar_tempo(tempo["elapsed"])
   )
-  
+
   write.table(
     linha,
     file = arquivo,
@@ -163,7 +161,7 @@ tempo_sits_get_data <- system.time({
     label_attr  = "label",
     bands       = sits_bands(cubo_treino),
     multicores  = 38,
-    memsize     = 110, 
+    memsize     = 110,
     progress    = TRUE
   )
 })
@@ -172,11 +170,11 @@ formatar_tempo(tempo_sits_get_data["elapsed"])
 
 registrar_tempo("Cubo de amostras", tempo_sits_get_data)
 
-saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_EGB_ST.rds"))
+saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_EGB.rds"))
 
 # Recarregar em nova sessão
 
-amostras <- readRDS(file.path(dir_rds,"amostras_cubo_teste_EGB_ST.rds"))
+amostras <- readRDS(file.path(dir_rds,"amostras_cubo_teste_EGB.rds"))
 
 summary(amostras)
 sits_bands(amostras)
@@ -200,8 +198,8 @@ formatar_tempo(tempo_treino["elapsed"])
 
 registrar_tempo("Treinamento", tempo_treino)
 
-saveRDS(modelo_egb, file.path(dir_model, "modelo_EGB_ST.rds"))
-modelo_egb <- readRDS(file.path(dir_model, "modelo_EGB_ST.rds"))
+saveRDS(modelo_egb, file.path(dir_model, "modelo_EGB.rds"))
+modelo_egb <- readRDS(file.path(dir_model, "modelo_EGB.rds"))
 
 plot(modelo_egb)
 
@@ -218,7 +216,7 @@ plot(egb_validate, type = "confusion_matrix")
 
 # ==================================================================================
 
-# GERAR CUBO 
+# GERAR CUBO
 
 # ==================================================================================
 
@@ -239,20 +237,20 @@ cubo_classificacao <- sits_select(
 
 # ==================================================================================
 
-# LOOP DE CLASSIFICAÇÃO POR TILE A TILE 
+# LOOP DE CLASSIFICAÇÃO POR TILE A TILE
 
 # ==================================================================================
 
 for (tile in tile_classificacao) {
-  
+
   cat("\n=============================================================\n")
   cat("PROCESSANDO TILE:", tile, "\n")
   cat("=============================================================\n\n")
-  
+
   # Definir porcentagens de cada classe e extrair valores para suavização
-  
+
   cubo_tile <- sits_select(cubo_classificacao, tiles = tile)
-  
+
 tempo_classificacao <- system.time({
   class_probs <- sits_classify(
     data       = cubo_tile,
@@ -262,7 +260,7 @@ tempo_classificacao <- system.time({
     memsize    = 96, # O máximo é 144 na GPU
     gpu_memory = 8,
     progress   = TRUE,
-    version    = "EGB_ST"
+    version    = "EGB"
   )
 })
 
@@ -281,7 +279,7 @@ registrar_tempo(
 
 # ==================================================================================
 
-# Calcular valores de variância para cada classe 
+# Calcular valores de variância para cada classe
 
 tempo_variance <- system.time({
   variance <- sits_variance(
@@ -291,7 +289,7 @@ tempo_variance <- system.time({
     output_dir     = dir_out,
     multicores     = 30,
     memsize        = 86,
-    version        = "EGB_ST"
+    version        = "EGB"
   )
 })
 
@@ -349,17 +347,17 @@ tempo_smooth_map <- system.time({
       output_dir     = dir_out,
       multicores     = 30,
       memsize        = 86,
-      version        = "EGB_ST"
+      version        = "EGB"
     )
-    
+
     # Mapa Classificado
-    
+
     sits_label_classification(
       cube       = cube_smooth,
       output_dir = dir_out,
       multicores = 30,
       memsize    = 82,
-      version    = "EGB_ST"
+      version    = "EGB"
     )
   })
 
@@ -383,7 +381,7 @@ tempo_uncertainty <- system.time({
     output_dir = dir_out,
     multicores = 30,
     memsize    = 86,
-    version    = "EGB_ST"
+    version    = "EGB"
   )
 })
 
@@ -412,7 +410,7 @@ tempos_df <- tibble(
     "Suavização + Mapa",
     "Incerteza"
   ),
-  
+
   tempo_horas = c(
     tempo_sits_get_data["elapsed"] / 3600,
     tempo_treino["elapsed"] / 3600,
@@ -422,7 +420,7 @@ tempos_df <- tibble(
     tempo_smooth_map["elapsed"] / 3600,
     tempo_uncertainty["elapsed"] / 3600
   ),
-  
+
   tempo_formatado = c(
     formatar_tempo(tempo_sits_get_data["elapsed"]),
     formatar_tempo(tempo_treino["elapsed"]),
