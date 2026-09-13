@@ -2,6 +2,7 @@
 
 # EXTREME GRADIENT BOOSTING - EGB
 # DATA: 15/08/2026
+# AUTORIA: JEANNE FRANCO
 
 # ==================================================================================
 

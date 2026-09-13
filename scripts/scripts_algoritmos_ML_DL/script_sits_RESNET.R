@@ -2,6 +2,7 @@
 
 # RESIDUAL 1D CNN NETWORKS - RESNET
 # DATA: 26/08/2026
+# AUTORIA: JEANNE FRANCO
 
 # ==================================================================================
 
