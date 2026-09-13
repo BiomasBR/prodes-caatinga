@@ -1,6 +1,6 @@
 # ==================================================================================
 
-# TEMPORAL CNN - TEMP
+# LIGHT TEMPORAL ATTENTION ENCODER - LTAE
 # AUTORIA: JEANNE FRANCO
 # DATA: 24/07/2026
 
@@ -57,20 +57,16 @@ tiles_treino <- c("037011", "037012", "037013",
                   "040013", "040014", "041012",
                   "041013", "041014", "041015")
 
-# E a classificação será feita apenas nesses tiles:
+# E a classificação será feita apenas nesses tiles
 
 tile_classificacao <- c("037011", "037012","038012")
-
-# Datas inicial e final para as classificações
 
 start_date <- "2024-07-27"
 end_date   <- "2025-12-19"
 
-# Criar novas pastas onde os arquivos serão armazenados
-
 dir_rds   <- "arquivos_rds"
 dir_model <- "modelos"
-dir_out   <- "classificacao_TEMP"
+dir_out   <- "classificacao_LT"
 
 dir.create(dir_rds, recursive = TRUE, showWarnings = FALSE)
 dir.create(dir_model, recursive = TRUE, showWarnings = FALSE)
@@ -81,8 +77,6 @@ dir.create(dir_out, recursive = TRUE, showWarnings = FALSE)
 # CUBO DE TREINO (MÚLTIPLOS TILES)
 
 # ==================================================================================
-
-# Criar cubo de dados com tiles e datas definidas anteriormente
 
 cubo_treino <- sits_cube(
   source     = "BDC",
@@ -104,13 +98,13 @@ cubo_treino <- sits_select(
 sits_bands(cubo_treino)
 sits_timeline(cubo_treino)
 
-saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_TEMP.rds"))
-cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_TEMP.rds"))
+saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_LT.rds"))
+cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_LT.rds"))
 
 # ==================================================================================
 
 ## Essa função vai ajudar a deixar a marcação de tempo de processamento mais amigável
-### Formatando saída da contagem de tempo dos processamentos
+### Formtando saída da contagem de tempo de processamento
 
 formatar_tempo <- function(segundos) {
   horas <- floor(segundos / 3600)
@@ -118,33 +112,6 @@ formatar_tempo <- function(segundos) {
   segundos <- round(segundos %% 60)
 
   sprintf("%02dh %02dm %02ds", horas, minutos, segundos)
-}
-
-# ==================================================================================
-# SALVAR TEMPOS DE PROCESSAMENTO
-# ==================================================================================
-
-registrar_tempo <- function(
-    etapa,
-    tempo,
-    arquivo = file.path(dir_out, "tempos_processamento.csv")
-)  {
-
-  linha <- data.frame(
-    etapa = etapa,
-    tempo_segundos = as.numeric(tempo["elapsed"]),
-    tempo_horas = as.numeric(tempo["elapsed"]) / 3600,
-    tempo_formatado = formatar_tempo(tempo["elapsed"])
-  )
-
-  write.table(
-    linha,
-    file = arquivo,
-    sep = ",",
-    row.names = FALSE,
-    col.names = !file.exists(arquivo),
-    append = file.exists(arquivo)
-  )
 }
 
 # ==================================================================================
@@ -169,13 +136,11 @@ tempo_sits_get_data <- system.time({
 
 formatar_tempo(tempo_sits_get_data["elapsed"])
 
-registrar_tempo("Cubo de amostras", tempo_sits_get_data)
-
-saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_TEMP.rds"))
+saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_LT.rds"))
 
 # Recarregar em nova sessão
 
-amostras <- readRDS(file.path(dir_rds, "amostras_cubo_teste_TEMP.rds"))
+amostras <- readRDS(file.path(dir_rds, "amostras_cubo_teste_LT.rds"))
 
 summary(amostras)
 sits_bands(amostras)
@@ -189,31 +154,29 @@ sits_bands(amostras)
 set.seed(220)
 
 tempo_treino <- system.time({
-  modelo_tempcnn <- sits_train(
+  modelo_ltae <- sits_train(
     samples = amostras,
-    ml_method = sits_tempcnn()
+    ml_method = sits_lighttae()
   )
 })
 
 formatar_tempo(tempo_treino["elapsed"])
 
-registrar_tempo("Treinamento", tempo_treino)
+saveRDS(modelo_ltae, file.path(dir_model, "modelo_LT.rds"))
+modelo_ltae <- readRDS(file.path(dir_model,"modelo_LT.rds"))
 
-saveRDS(modelo_tempcnn, file.path(dir_model, "modelo_TEMP.rds"))
-modelo_tempcnn <- readRDS(file.path(dir_model, "modelo_TEMP.rds"))
+plot(modelo_ltae)
 
-plot(modelo_tempcnn)
-
-tempcnn_validate <- sits_kfold_validate(
+ltae_validate <- sits_kfold_validate(
   samples = amostras,
   folds = 5,
-  ml_method = sits_tempcnn(),
+  ml_method = sits_lighttae(),
   multicores = 5
 )
 
-tempcnn_validate
+ltae_validate
 
-plot(tempcnn_validate, type = "confusion_matrix")
+plot(ltae_validate, type = "confusion_matrix")
 
 # ==================================================================================
 
@@ -255,13 +218,13 @@ for (tile in tile_classificacao) {
 tempo_classificacao <- system.time({
   class_probs <- sits_classify(
     data       = cubo_tile,
-    ml_model   = modelo_tempcnn,
+    ml_model   = modelo_ltae,
     output_dir = dir_out,
-    multicores = 1,
-    memsize    = 96,
-    gpu_memory = 18,
+    multicores = 16,
+    memsize    = 58,
+    gpu_memory = 5,
     progress   = TRUE,
-    version    = "TEMP"
+    version    = "LT"
   )
 })
 
@@ -269,18 +232,11 @@ tempo_classificacao <- system.time({
 
 formatar_tempo(tempo_classificacao["elapsed"])
 
-registrar_tempo(
-  paste("Classificação - Tile", tile),
-  tempo_classificacao
-)
-
 # ==================================================================================
 
-# VARIÂNCIA
+# 7. VARIÂNCIA
 
 # ==================================================================================
-
-# Calcular valores de variância para cada classe
 
 tempo_variance <- system.time({
   variance <- sits_variance(
@@ -289,25 +245,19 @@ tempo_variance <- system.time({
     neigh_fraction = 0.5,
     output_dir     = dir_out,
     multicores     = 16,
-    memsize        = 98,
-    version        = "TEMP"
+    memsize        = 58,
+    version        = "LT"
   )
 })
 
 formatar_tempo(tempo_variance["elapsed"])
 
-registrar_tempo(
-  paste("Variância - Tile", tile),
-  tempo_variance
-)
+# ==================================================================================
+
+# 8. HIPERPARÂMETROS DE SUAVIZAÇÃO
 
 # ==================================================================================
 
-# HIPERPARÂMETROS DE SUAVIZAÇÃO
-
-# ==================================================================================
-
-# Definir porcentagens de cada classe e extrair valores para suavização
 
 sumv_df <- as.data.frame(summary(variance))
 
@@ -323,23 +273,19 @@ tempo_smooth <- system.time({
       supressao   = sumv_df["80%", "supressao"],
       veg_natural = sumv_df["85%", "veg_natural"]
     )
+
   })
 
 formatar_tempo(tempo_smooth["elapsed"])
 
-registrar_tempo(
-  paste("Valores Smooth - Tile", tile),
-  tempo_smooth
-)
-
 # ==================================================================================
 
-# SUAVIZAÇÃO E CLASSIFICAÇÃO TEMÁTICA FINAL
+# 9. SUAVIZAÇÃO E CLASSIFICAÇÃO TEMÁTICA FINAL
 
 # ==================================================================================
 
 tempo_smooth_map <- system.time({
-cube_smooth <- sits_smooth(
+    cube_smooth <- sits_smooth(
       cube           = class_probs,
       smoothness     = smooth_values,
       window_size    = 5,
@@ -347,8 +293,8 @@ cube_smooth <- sits_smooth(
       progress       = TRUE,
       output_dir     = dir_out,
       multicores     = 16,
-      memsize        = 98,
-      version        = "TEMP"
+      memsize        = 58,
+      version        = "LT"
     )
 
     # Mapa Classificado
@@ -357,21 +303,16 @@ cube_smooth <- sits_smooth(
       cube       = cube_smooth,
       output_dir = dir_out,
       multicores = 16,
-      memsize    = 98,
-      version    = "TEMP"
+      memsize    = 58,
+      version    = "LT"
     )
   })
 
 formatar_tempo(tempo_smooth_map["elapsed"])
 
-registrar_tempo(
-  paste("Suavização + Mapa - Tile", tile),
-  tempo_smooth_map
-)
-
 # ==================================================================================
 
-# INCERTEZA
+# 10. INCERTEZA
 
 # ==================================================================================
 
@@ -381,23 +322,18 @@ tempo_uncertainty <- system.time({
     type       = "margin",
     output_dir = dir_out,
     multicores = 16,
-    memsize    = 98,
-    version    = "TEMP"
+    memsize    = 58,
+    version    = "LT"
   )
 })
 
 formatar_tempo(tempo_uncertainty["elapsed"])
 
-registrar_tempo(
-  paste("Incerteza - Tile", tile),
-  tempo_uncertainty
-)
-
 }
 
 # ==================================================================================
 
-# RELATÓRIO FINAL DO TEMPO DE PROCESSAMENTO
+# 7. RELATÓRIO FINAL DO TEMPO DE PROCESSAMENTO
 
 # ==================================================================================
 

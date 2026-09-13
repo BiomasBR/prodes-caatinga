@@ -1,8 +1,7 @@
 # ==================================================================================
 
-# CLASSIFICAÇÃO MLP_ST - TESTES 2026.2
-# MULTILAYER PERCEPTRON - MLP_ST
-# RESPONSÁVEL: JEANNE
+# CLASSIFICAÇÃO MULTILAYER PERCEPTRON - MLP
+# AUTORIA: JEANNE
 # DATA: 04/08/2026
 
 # ==================================================================================
@@ -11,7 +10,7 @@
 
 # ==================================================================================
 
-rm(list = ls()) 
+rm(list = ls())
 
 # ==================================================================================
 
@@ -71,7 +70,7 @@ end_date   <- "2025-12-19"
 
 dir_rds   <- "arquivos_rds"
 dir_model <- "modelos"
-dir_out   <- "classificacao_MLP_ST"
+dir_out   <- "classificacao_MLP"
 
 dir.create(dir_rds, recursive = TRUE, showWarnings = FALSE)
 dir.create(dir_model, recursive = TRUE, showWarnings = FALSE)
@@ -105,8 +104,8 @@ cubo_treino <- sits_select(
 sits_bands(cubo_treino)
 sits_timeline(cubo_treino)
 
-saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_MLP_ST.rds"))
-cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_MLP_ST.rds"))
+saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_MLP.rds"))
+cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_MLP.rds"))
 
 # ==================================================================================
 
@@ -117,7 +116,7 @@ formatar_tempo <- function(segundos) {
   horas <- floor(segundos / 3600)
   minutos <- floor((segundos %% 3600) / 60)
   segundos <- round(segundos %% 60)
-  
+
   sprintf("%02dh %02dm %02ds", horas, minutos, segundos)
 }
 
@@ -130,14 +129,14 @@ registrar_tempo <- function(
     tempo,
     arquivo = file.path(dir_out, "tempos_processamento.csv")
 )  {
-  
+
   linha <- data.frame(
     etapa = etapa,
     tempo_segundos = as.numeric(tempo["elapsed"]),
     tempo_horas = as.numeric(tempo["elapsed"]) / 3600,
     tempo_formatado = formatar_tempo(tempo["elapsed"])
   )
-  
+
   write.table(
     linha,
     file = arquivo,
@@ -172,11 +171,11 @@ formatar_tempo(tempo_sits_get_data["elapsed"])
 
 registrar_tempo("Cubo de amostras", tempo_sits_get_data)
 
-saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_MLP_ST.rds"))
+saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_MLP.rds"))
 
 # Recarregar em nova sessão
 
-amostras <- readRDS("amostras_cubo_teste_MLP_ST.rds")
+amostras <- readRDS("amostras_cubo_teste_MLP.rds")
 
 summary(amostras)
 sits_bands(amostras)
@@ -200,8 +199,8 @@ formatar_tempo(tempo_treino["elapsed"])
 
 registrar_tempo("Treinamento", tempo_treino)
 
-saveRDS(modelo_mlp, file.path(dir_model, "modelo_MLP_ST.rds"))
-modelo_mlp <- readRDS(file.path(dir_model,"modelo_MLP_ST.rds"))
+saveRDS(modelo_mlp, file.path(dir_model, "modelo_MLP.rds"))
+modelo_mlp <- readRDS(file.path(dir_model,"modelo_MLP.rds"))
 
 plot(modelo_mlp)
 
@@ -240,20 +239,20 @@ cubo_classificacao <- sits_select(
 
 # ==================================================================================
 
-# LOOP DE CLASSIFICAÇÃO POR TILE A TILE 
+# LOOP DE CLASSIFICAÇÃO POR TILE A TILE
 
 # ==================================================================================
 
 for (tile in tile_classificacao) {
-  
+
   cat("\n=============================================================\n")
   cat("PROCESSANDO TILE:", tile, "\n")
   cat("=============================================================\n\n")
-  
+
   # Selecionar um tile específico do cubo para o loop tile a tile
-  
+
   cubo_tile <- sits_select(cubo_classificacao, tiles = tile)
-  
+
   tempo_classificacao <- system.time({
     class_probs <- sits_classify(
       data       = cubo_tile,
@@ -263,27 +262,27 @@ for (tile in tile_classificacao) {
       memsize    = 96, # O máximo é 144
       gpu_memory = 18,
       progress   = TRUE,
-      version    = "MLP_ST"
+      version    = "MLP"
     )
   })
-  
+
   # Mostra o tempo de processamento
-  
+
   formatar_tempo(tempo_classificacao["elapsed"])
-  
+
   registrar_tempo(
     paste("Classificação - Tile", tile),
     tempo_classificacao
   )
-  
+
   # ==================================================================================
-  
+
   # VARIÂNCIA
-  
+
   # ==================================================================================
-  
-  # Calcular valores de variância para cada classe 
-  
+
+  # Calcular valores de variância para cada classe
+
   tempo_variance <- system.time({
     variance <- sits_variance(
       cube           = class_probs,
@@ -292,30 +291,30 @@ for (tile in tile_classificacao) {
       output_dir     = dir_out,
       multicores     = 16,
       memsize        = 98,
-      version        = "MLP_ST"
+      version        = "MLP"
     )
   })
-  
+
   formatar_tempo(tempo_variance["elapsed"])
-  
+
   registrar_tempo(
     paste("Variância - Tile", tile),
     tempo_variance
   )
-  
+
   # ==================================================================================
-  
+
   # HIPERPARÂMETROS DE SUAVIZAÇÃO
-  
+
   # ==================================================================================
-  
+
   # Definir porcentagens de cada classe e extrair valores para suavização
-  
+
   sumv_df <- as.data.frame(summary(variance))
-  
+
   cat("\n--- VARIÂNCIA (percentis) –", "TILE", tile, "\n")
   print(sumv_df)
-  
+
   tempo_smooth <- system.time({
     smooth_values <- c(
       aflor_rocha = sumv_df["80%", "aflor_rocha"],
@@ -326,20 +325,20 @@ for (tile in tile_classificacao) {
       veg_natural = sumv_df["85%", "veg_natural"]
     )
   })
-  
+
   formatar_tempo(tempo_smooth["elapsed"])
-  
+
   registrar_tempo(
     paste("Valores Smooth - Tile", tile),
     tempo_smooth
   )
-  
+
   # ==================================================================================
-  
+
   # SUAVIZAÇÃO E CLASSIFICAÇÃO TEMÁTICA FINAL
-  
+
   # ==================================================================================
-  
+
   tempo_smooth_map <- system.time({
     cube_smooth <- sits_smooth(
       cube           = class_probs,
@@ -350,33 +349,33 @@ for (tile in tile_classificacao) {
       output_dir     = dir_out,
       multicores     = 16,
       memsize        = 98,
-      version        = "MLP_ST"
+      version        = "MLP"
     )
-    
+
     # Mapa Classificado
-    
+
     sits_label_classification(
       cube       = cube_smooth,
       output_dir = dir_out,
       multicores = 16,
       memsize    = 98,
-      version    = "MLP_ST"
+      version    = "MLP"
     )
   })
-  
+
   formatar_tempo(tempo_smooth_map["elapsed"])
-  
+
   registrar_tempo(
     paste("Suavização + Mapa - Tile", tile),
     tempo_smooth_map
   )
-  
+
   # ==================================================================================
-  
+
   # INCERTEZA
-  
+
   # ==================================================================================
-  
+
   tempo_uncertainty <- system.time({
     uncertainty <- sits_uncertainty(
       cube       = class_probs,
@@ -384,17 +383,17 @@ for (tile in tile_classificacao) {
       output_dir = dir_out,
       multicores = 16,
       memsize    = 98,
-      version    = "MLP_ST"
+      version    = "MLP"
     )
   })
-  
+
   formatar_tempo(tempo_uncertainty["elapsed"])
-  
+
   registrar_tempo(
     paste("Incerteza - Tile", tile),
     tempo_uncertainty
   )
-  
+
 }
 
 # ==================================================================================
@@ -413,7 +412,7 @@ tempos_df <- tibble(
     "Suavização + Mapa",
     "Incerteza"
   ),
-  
+
   tempo_horas = c(
     tempo_sits_get_data["elapsed"] / 3600,
     tempo_treino["elapsed"] / 3600,
@@ -423,7 +422,7 @@ tempos_df <- tibble(
     tempo_smooth_map["elapsed"] / 3600,
     tempo_uncertainty["elapsed"] / 3600
   ),
-  
+
   tempo_formatado = c(
     formatar_tempo(tempo_sits_get_data["elapsed"]),
     formatar_tempo(tempo_treino["elapsed"]),
