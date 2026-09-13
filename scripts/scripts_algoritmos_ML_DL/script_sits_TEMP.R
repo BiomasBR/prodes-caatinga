@@ -1,8 +1,7 @@
 # ==================================================================================
 
-# CLASSIFICAÇÃO TEMPCNN - TESTES 2026.2
-# TESTE TEMPCNN SEM TUNNING - TEMP_ST
-# RESPONSÁVEL: JEANNE FRANCO
+# LIGHT TEMPORAL ATTENTION ENCODER - TEMP
+# AUTORIA: JEANNE FRANCO
 # DATA: 24/07/2026
 
 # ==================================================================================
@@ -11,7 +10,7 @@
 
 # ==================================================================================
 
-rm(list = ls()) 
+rm(list = ls())
 
 # ==================================================================================
 
@@ -71,7 +70,7 @@ end_date   <- "2025-12-19"
 
 dir_rds   <- "arquivos_rds"
 dir_model <- "modelos"
-dir_out   <- "classificacao_TEMP_ST"
+dir_out   <- "classificacao_TEMP"
 
 dir.create(dir_rds, recursive = TRUE, showWarnings = FALSE)
 dir.create(dir_model, recursive = TRUE, showWarnings = FALSE)
@@ -105,8 +104,8 @@ cubo_treino <- sits_select(
 sits_bands(cubo_treino)
 sits_timeline(cubo_treino)
 
-saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_TEMP_ST.rds"))
-cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_TEMP_ST.rds"))
+saveRDS(cubo_treino, file.path(dir_rds, "cubo_treino_teste_TEMP.rds"))
+cubo_treino <- readRDS(file.path(dir_rds, "cubo_treino_teste_TEMP.rds"))
 
 # ==================================================================================
 
@@ -117,7 +116,7 @@ formatar_tempo <- function(segundos) {
   horas <- floor(segundos / 3600)
   minutos <- floor((segundos %% 3600) / 60)
   segundos <- round(segundos %% 60)
-  
+
   sprintf("%02dh %02dm %02ds", horas, minutos, segundos)
 }
 
@@ -130,14 +129,14 @@ registrar_tempo <- function(
     tempo,
     arquivo = file.path(dir_out, "tempos_processamento.csv")
 )  {
-  
+
   linha <- data.frame(
     etapa = etapa,
     tempo_segundos = as.numeric(tempo["elapsed"]),
     tempo_horas = as.numeric(tempo["elapsed"]) / 3600,
     tempo_formatado = formatar_tempo(tempo["elapsed"])
   )
-  
+
   write.table(
     linha,
     file = arquivo,
@@ -172,11 +171,11 @@ formatar_tempo(tempo_sits_get_data["elapsed"])
 
 registrar_tempo("Cubo de amostras", tempo_sits_get_data)
 
-saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_TEMP_ST.rds"))
+saveRDS(amostras, file.path(dir_rds, "amostras_cubo_teste_TEMP.rds"))
 
 # Recarregar em nova sessão
 
-amostras <- readRDS(file.path(dir_rds, "amostras_cubo_teste_TEMP_ST.rds"))
+amostras <- readRDS(file.path(dir_rds, "amostras_cubo_teste_TEMP.rds"))
 
 summary(amostras)
 sits_bands(amostras)
@@ -200,8 +199,8 @@ formatar_tempo(tempo_treino["elapsed"])
 
 registrar_tempo("Treinamento", tempo_treino)
 
-saveRDS(modelo_tempcnn, file.path(dir_model, "modelo_TEMP_ST.rds"))
-modelo_tempcnn <- readRDS(file.path(dir_model, "modelo_TEMP_ST.rds"))
+saveRDS(modelo_tempcnn, file.path(dir_model, "modelo_TEMP.rds"))
+modelo_tempcnn <- readRDS(file.path(dir_model, "modelo_TEMP.rds"))
 
 plot(modelo_tempcnn)
 
@@ -239,30 +238,30 @@ cubo_classificacao <- sits_select(
 
 # ==================================================================================
 
-# LOOP DE CLASSIFICAÇÃO POR TILE A TILE  
+# LOOP DE CLASSIFICAÇÃO POR TILE A TILE
 
 # ==================================================================================
 
 for (tile in tile_classificacao) {
-  
+
   cat("\n=============================================================\n")
   cat("PROCESSANDO TILE:", tile, "\n")
   cat("=============================================================\n\n")
-  
+
   # Selecionar um tile específico do cubo para o loop tile a tile
-  
+
   cubo_tile <- sits_select(cubo_classificacao, tiles = tile)
-  
+
 tempo_classificacao <- system.time({
   class_probs <- sits_classify(
     data       = cubo_tile,
     ml_model   = modelo_tempcnn,
     output_dir = dir_out,
-    multicores = 1, 
-    memsize    = 96, 
+    multicores = 1,
+    memsize    = 96,
     gpu_memory = 18,
     progress   = TRUE,
-    version    = "TEMP_ST"
+    version    = "TEMP"
   )
 })
 
@@ -281,7 +280,7 @@ registrar_tempo(
 
 # ==================================================================================
 
-# Calcular valores de variância para cada classe 
+# Calcular valores de variância para cada classe
 
 tempo_variance <- system.time({
   variance <- sits_variance(
@@ -291,7 +290,7 @@ tempo_variance <- system.time({
     output_dir     = dir_out,
     multicores     = 16,
     memsize        = 98,
-    version        = "TEMP_ST"
+    version        = "TEMP"
   )
 })
 
@@ -349,17 +348,17 @@ cube_smooth <- sits_smooth(
       output_dir     = dir_out,
       multicores     = 16,
       memsize        = 98,
-      version        = "TEMP_ST"
+      version        = "TEMP"
     )
-    
+
     # Mapa Classificado
-    
+
     sits_label_classification(
       cube       = cube_smooth,
       output_dir = dir_out,
       multicores = 16,
       memsize    = 98,
-      version    = "TEMP_ST"
+      version    = "TEMP"
     )
   })
 
@@ -383,7 +382,7 @@ tempo_uncertainty <- system.time({
     output_dir = dir_out,
     multicores = 16,
     memsize    = 98,
-    version    = "TEMP_ST"
+    version    = "TEMP"
   )
 })
 
@@ -412,7 +411,7 @@ tempos_df <- tibble(
     "Suavização + Mapa",
     "Incerteza"
   ),
-  
+
   tempo_horas = c(
     tempo_sits_get_data["elapsed"] / 3600,
     tempo_treino["elapsed"] / 3600,
@@ -422,7 +421,7 @@ tempos_df <- tibble(
     tempo_smooth_map["elapsed"] / 3600,
     tempo_uncertainty["elapsed"] / 3600
   ),
-  
+
   tempo_formatado = c(
     formatar_tempo(tempo_sits_get_data["elapsed"]),
     formatar_tempo(tempo_treino["elapsed"]),
